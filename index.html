@@ -4,13 +4,7 @@
       "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
     }
   }
-
-
-
-
-
 </script>
-
 <div id="app">
     <div>
         <div class="container">
@@ -116,8 +110,6 @@
                 this.downloadURI(encodedUri, 'export')
             },
             async handlePlay() {
-                console.log(this.queue)
-
                 const scrollTo = document.getElementById('scroll-anchor');
                 scrollTo.scrollIntoView();
                 for (let i = this.tilesInColCnt; i >= 0; i--) {
@@ -146,7 +138,6 @@
             },
 
             playSound(key) {
-                console.log(key)
                 tiles[key].play()
             },
             stopSound(key) {
