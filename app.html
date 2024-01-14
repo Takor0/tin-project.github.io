@@ -1,0 +1,285 @@
+<script type="importmap">
+  {
+    "imports": {
+      "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    }
+  }
+
+
+
+
+
+</script>
+
+<div id="app">
+    <div>
+        <div class="container">
+            <div v-for="key in keys" class="col">
+                <div
+                        :key="`${colKey} ${row} ${key}`"
+                        :class="{active: isCellActive(key, row)}"
+                        v-for="row in range(tilesInColCnt)"
+                        class="row" @click="handleCellClick(key, row)">
+                </div>
+                <span id="scroll-anchor"></span>
+            </div>
+        </div>
+        <div class="menu">
+            <button @click="download">
+                Download
+            </button>
+            <span style="position: relative">
+                <label class="upload-label" for="filename">Select file</label>
+                <input class="custom-file-input" type="file" name="filename" id="filename">
+            </span>
+            <button id="upload" @click="upload">upload</button>
+            <div class="csv"></div>
+            <div @click="handlePlay">
+                <img width="100" src="play-button.svg">
+            </div>
+        </div>
+
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js"
+        integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
+<script type="module">
+    import {createApp} from 'vue'
+
+    const TILESINCOLCNT = 20
+    const queue = {}
+    const keys = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';']
+    const tiles = {}
+
+    keys.forEach(key => {
+        tiles[key] = new Audio(`tunes/${key}.wav`)
+    })
+
+    function range(n) {
+        return Array.from({length: n}, (x, i) => i);
+    }
+
+    for (let i = 0; i <= TILESINCOLCNT; i++) {
+        queue[i] = [];
+    }
+    let csvResult
+    $(document).ready(function () {
+        $('#upload').click(function () {
+            var csv = $('#filename');
+            var csvFile = csv[0].files[0];
+            var ext = csv.val().split(".").pop().toLowerCase();
+            let result = []
+            if ($.inArray(ext, ["csv"]) === -1) {
+                alert('upload csv');
+                return false;
+            }
+            if (csvFile !== undefined) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    csvResult = e.target.result.split(/\r|\n|\r\n/);
+                }
+                reader.readAsText(csvFile);
+            }
+        });
+    });
+    createApp({
+        methods: {
+            downloadURI(uri, name) {
+                let link = document.createElement("a");
+                link.download = name;
+                link.href = uri;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+            async upload() {
+                await this.sleep(100)
+                this.csvResult = csvResult
+                this.csvResult.forEach((row, index) => {
+                    this.queue[index] = row.split(',').filter(key => key !== '')
+
+                })
+            },
+            download() {
+                const rows = []
+                for (let i = 0; i < this.tilesInColCnt; i++) {
+                    const row = this.keys.map(key => {
+                        if (this.queue[i].includes(key)) return key
+                        else return ''
+                    })
+                    rows.push(row)
+                }
+                let csvContent = "data:text/csv;charset=utf-8,"
+                    + rows.map(e => e.join(",")).join("\n");
+                let encodedUri = encodeURI(csvContent);
+
+                this.downloadURI(encodedUri, 'export')
+            },
+            async handlePlay() {
+                console.log(this.queue)
+
+                const scrollTo = document.getElementById('scroll-anchor');
+                scrollTo.scrollIntoView();
+                for (let i = this.tilesInColCnt; i >= 0; i--) {
+                    const row = this.queue[i];
+                    for (const key of row) {
+                        if (key !== '') this.playSound(key);
+                    }
+                    await this.sleep(300);
+                    for (const key of row) {
+                        this.stopSound(key);
+                    }
+                }
+            },
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            },
+            isCellActive(key, row) {
+                return this.queue[row].includes(key)
+            },
+            handleCellClick(key, row) {
+                const _row = this.queue[row]
+                if (_row.includes(key)) {
+                    this.colKey++
+                    _row.splice(_row.indexOf(key), 1)
+                } else this.queue[row].push(key)
+            },
+
+            playSound(key) {
+                console.log(key)
+                tiles[key].play()
+            },
+            stopSound(key) {
+                tiles[key].pause()
+                tiles[key].currentTime = 0
+            },
+        },
+        mounted() {
+
+        },
+        data() {
+            return {
+                range,
+                queue: queue,
+                tilesInColCnt: TILESINCOLCNT,
+                tiles,
+                csvResult,
+                colKey: 0,
+                keys: ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'],
+                message: 'Hello Vue!'
+            }
+        }
+    }).mount('#app')
+</script>
+
+<style>
+    .custom-file-input::-webkit-file-upload-button {
+        visibility: hidden;
+    }
+
+    body {
+        display: flex;
+        justify-content: space-around;
+        background: linear-gradient(90deg, rgba(67, 155, 166, 1) 0%, rgba(39, 142, 144, 1) 10%, rgba(34, 138, 140, 1) 20%, rgba(9, 92, 121, 1) 32%, rgba(7, 81, 144, 1) 46%, rgba(5, 81, 169, 1) 58%, rgba(4, 118, 194, 1) 70%, rgba(3, 143, 210, 1) 78%, rgba(51, 155, 189, 1) 88%, rgba(0, 212, 255, 1) 100%);
+    }
+
+    img {
+        fill: #45a049;
+    }
+
+    .container {
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        margin-right: 200px;
+        display: flex;
+        background-color: rgba(255, 255, 255, 0.56);
+    }
+
+    .col {
+        min-width: 5vw;
+        border: 0.5px solid black;
+    }
+
+    .row {
+        height: 180px;
+    }
+
+    .active {
+        background-color: #246e70;
+    }
+
+    .menu {
+        padding: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        background-color: rgba(255, 255, 255, 0.56);
+        position: fixed;
+        top: 40vh;
+        right: 7vw;
+        z-index: 1;
+    }
+
+    .menu button {
+        width: 100px;
+        height: 30px;
+    }
+
+    .menu {
+        position: fixed;
+        top: 40vh;
+        right: 7vw;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+
+    .custom-file-input::before {
+        display: none;
+    }
+
+    input[type='file'] {
+        color: rgba(0, 0, 0, 0)
+    }
+
+    .custom-file-input {
+        width: 120px;
+        height: 40px;
+    }
+
+    .menu button, .custom-file-input {
+        width: 120px;
+        height: 40px;
+        margin-bottom: 10px;
+        background-color: rgb(38, 129, 131);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .menu button:hover, .custom-file-input:hover {
+        background-color: #45a049;
+    }
+
+    .menu input[type="file"] {
+        margin-bottom: 10px;
+    }
+
+
+    .csv {
+        margin-bottom: 10px;
+    }
+
+    .menu img {
+        cursor: pointer;
+    }
+
+    .upload-label {
+        position: absolute;
+        top: 12px;
+        left: 27%;
+        color: white;
+        font-size: 13.3px;
+        font-family: 'Arial', sans-serif;
+    }
+</style>
